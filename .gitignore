@@ -1,0 +1,8 @@
+venv/
+*.h5
+*.pkl
+*.npy
+*.npz
+*.jpg
+*.png
+__pycache__/
