@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prediction Result</title>
+</head>
+<body>
+    <h1>Prediction Result</h1>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% else %}
+        <p>Predicted Class: {{ predicted_class }}</p>
+    {% endif %}
+    <a href="/">Capture Another Image</a>
+</body>
+</html>

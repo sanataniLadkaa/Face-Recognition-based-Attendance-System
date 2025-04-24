@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Recognition Result</title>
+</head>
+<body>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% else %}
+        <h2>Recognized Person: {{ predicted_class }}</h2>
+        <img src="{{ image_path }}" alt="Captured Image" />
+    {% endif %}
+</body>
+</html>
