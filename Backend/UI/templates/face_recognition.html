@@ -1,16 +1,77 @@
+<!-- face_recognition.html -->
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Face Recognition Upload</title>
+    <meta charset="UTF-8">
+    <title>Face Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+        }
+        .card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button.secondary {
+            background: #1565c0;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        a {
+            text-decoration: none;
+        }
+    </style>
 </head>
 <body>
-    <h2>Upload Face Image for Attendance</h2>
-    <form action="/recognize_face" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept="image/*" required>
-        <button type="submit">Submit</button>
-    </form>
+<div class="container">
+    <div class="card">
+        <h2>📷 Face Recognition Attendance</h2>
 
-    <br>
-    <a href="/dashboard">👉 View Attendance Dashboard</a>
+        <!-- MARK ATTENDANCE -->
+        <form action="/recognize_face" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required>
+            <button type="submit">Mark Attendance</button>
+        </form>
+
+        <!-- 🔥 IMAGE RECORDING BUTTON -->
+        <a href="/attendance/record">
+            <button type="button" class="secondary">
+                📹 Record New Person (Camera)
+            </button>
+        </a>
+
+        <a href="/dashboard">
+            <button type="button">📊 View Attendance</button>
+        </a>
+
+        <br>
+
+<a href="/attendance/manage">
+    <button style="background:#ef6c00">✏️ Edit / Delete Persons</button>
+</a>
+    </div>
+</div>
 </body>
 </html>
