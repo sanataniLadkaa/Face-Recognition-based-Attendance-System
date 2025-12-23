@@ -1,10 +1,11 @@
 from fastapi import FastAPI, File, UploadFile, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
 from login import verify_login
 from store import router as attendance_router
+
 from deepface import DeepFace
 from supabase import create_client
 from dotenv import load_dotenv
@@ -32,7 +33,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://127.0.0.1"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,132 +60,105 @@ DISTANCE_THRESHOLD = 0.6
 
 DeepFace.build_model(MODEL_NAME)
 
-# -------------------- SESSION --------------------
+# -------------------- HELPERS --------------------
 
-def is_logged_in(request: Request):
-    return request.cookies.get("logged_in") == "yes"
+def get_username_from_user_id(user_id: str) -> str:
+    res = (
+        supabase
+        .table("face_embeddings")
+        .select("person_name")
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0]["person_name"] if res.data else "User"
 
-# -------------------- ROUTES --------------------
+
+def get_session(request: Request):
+    return {
+        "logged_in": request.cookies.get("logged_in") == "yes",
+        "role": request.cookies.get("role"),
+        "username": request.cookies.get("username"),
+        "user_id": request.cookies.get("user_id"),
+    }
+
+
+def require_login(request: Request):
+    if not get_session(request)["logged_in"]:
+        return RedirectResponse("/login")
+
+
+def require_admin(request: Request):
+    s = get_session(request)
+    if not s["logged_in"] or s["role"] != "admin":
+        return RedirectResponse("/login")
+
+# -------------------- ROOT --------------------
 
 @app.get("/", response_class=HTMLResponse)
 async def entry(request: Request):
-    return RedirectResponse("/home" if is_logged_in(request) else "/login")
+    s = get_session(request)
+    if not s["logged_in"]:
+        return RedirectResponse("/login")
+    return RedirectResponse("/admin" if s["role"] == "admin" else "/user")
+
+# -------------------- LOGIN --------------------
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
+
 @app.post("/login")
 async def login_submit(
     request: Request,
-    username: str = Form(...),
+    username: str = Form(...),  # user_id
     password: str = Form(...)
 ):
-    if verify_login(username, password):
-        response = RedirectResponse("/home", status_code=302)
-        response.set_cookie("logged_in", "yes", httponly=True)
-        return response
+    role = verify_login(username, password)
+    if not role:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Invalid credentials"}
+        )
 
-    return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "Invalid credentials"}
+    person_name = get_username_from_user_id(username)
+
+    response = RedirectResponse(
+        "/admin" if role == "admin" else "/user",
+        status_code=302
     )
+
+    response.set_cookie("logged_in", "yes", httponly=True)
+    response.set_cookie("role", role, httponly=True)
+    response.set_cookie("username", person_name, httponly=True)
+    response.set_cookie("user_id", username, httponly=True)
+
+    return response
+
 
 @app.get("/logout")
 async def logout():
     response = RedirectResponse("/login")
-    response.delete_cookie("logged_in")
+    for k in ["logged_in", "role", "username", "user_id"]:
+        response.delete_cookie(k)
     return response
 
-@app.get("/home", response_class=HTMLResponse)
-async def home_page(request: Request):
-    if not is_logged_in(request):
-        return RedirectResponse("/login")
+# -------------------- ADMIN UI --------------------
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_home(request: Request):
+    resp = require_admin(request)
+    if resp:
+        return resp
     return templates.TemplateResponse("face_recognition.html", {"request": request})
 
-# -------------------- FACE RECOGNITION --------------------
-
-@app.post("/recognize_face", response_class=HTMLResponse)
-async def recognize_face(request: Request, file: UploadFile = File(...)):
-    if not is_logged_in(request):
-        return RedirectResponse("/login")
-
-    img_path = os.path.join(
-        UPLOAD_DIR,
-        f"{datetime.now().timestamp()}_{file.filename}"
-    )
-
-    with open(img_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    try:
-        faces = DeepFace.represent(
-            img_path=img_path,
-            model_name=MODEL_NAME,
-            detector_backend=DETECTOR_BACKEND,
-            enforce_detection=False
-        )
-    except Exception as e:
-        os.remove(img_path)
-        return templates.TemplateResponse(
-            "result.html",
-            {"request": request, "status": "error", "reason": str(e)}
-        )
-
-    recognized = []
-
-    for face in faces:
-        embedding = list(map(float, face["embedding"]))  # 🔥 IMPORTANT
-
-        result = supabase.rpc(
-            "match_face_embedding",
-            {
-                "query_embedding": embedding,
-                "match_threshold": DISTANCE_THRESHOLD,
-                "match_count": 1
-            }
-        ).execute()
-
-        print("Supabase result:", result.data)
-
-        if result.data:
-            recognized.append(result.data[0]["person_name"])
-
-    os.remove(img_path)
-
-    if recognized:
-        today_csv = os.path.join(
-            ATTENDANCE_DIR,
-            f"{datetime.now().strftime('%Y-%m-%d')}_attendance.csv"
-        )
-
-        with open(today_csv, "a", newline="") as f:
-            writer = csv.writer(f)
-            if os.stat(today_csv).st_size == 0:
-                writer.writerow(["Person", "Timestamp"])
-            for p in set(recognized):
-                writer.writerow([p, datetime.now().strftime("%H:%M:%S")])
-
-        return templates.TemplateResponse(
-            "result.html",
-            {
-                "request": request,
-                "status": "success",
-                "recognized_persons": list(set(recognized))
-            }
-        )
-
-    return templates.TemplateResponse(
-        "result.html",
-        {"request": request, "status": "fail", "reason": "No match found"}
-    )
-
-# -------------------- DASHBOARD --------------------
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    if not is_logged_in(request):
-        return RedirectResponse("/login")
+async def admin_dashboard(request: Request):
+    resp = require_admin(request)
+    if resp:
+        return resp
 
     today_csv = os.path.join(
         ATTENDANCE_DIR,
@@ -207,5 +181,132 @@ async def dashboard(request: Request):
         }
     )
 
-# -------------------- ROUTER --------------------
+# -------------------- USER UI --------------------
+
+@app.get("/user", response_class=HTMLResponse)
+async def user_dashboard(request: Request):
+    s = get_session(request)
+    if not s["logged_in"] or s["role"] != "user":
+        return RedirectResponse("/login")
+
+    return templates.TemplateResponse(
+        "user_dashboard.html",
+        {"request": request, "username": s["username"]}
+    )
+
+# -------------------- FACE RECOGNITION --------------------
+
+@app.post("/recognize_face", response_class=HTMLResponse)
+async def recognize_face(request: Request, file: UploadFile = File(...)):
+    s = get_session(request)
+    if not s["logged_in"]:
+        return RedirectResponse("/login")
+
+    role = s["role"]
+    logged_in_user_id = s["user_id"]
+
+    img_path = os.path.join(
+        UPLOAD_DIR,
+        f"{datetime.now().timestamp()}_{file.filename}"
+    )
+
+    with open(img_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    faces = DeepFace.represent(
+        img_path=img_path,
+        model_name=MODEL_NAME,
+        detector_backend=DETECTOR_BACKEND,
+        enforce_detection=False
+    )
+
+    recognized = []
+
+    for face in faces:
+        embedding = list(map(float, face["embedding"]))
+
+        result = supabase.rpc(
+            "match_face_embedding",
+            {
+                "query_embedding": embedding,
+                "match_threshold": DISTANCE_THRESHOLD,
+                "match_count": 1
+            }
+        ).execute()
+
+        if not result.data:
+            continue
+
+        matched_user_id = result.data[0]["user_id"]
+        matched_name = result.data[0]["person_name"]
+
+        # ❌ Restriction ONLY for normal users
+        if role == "user" and matched_user_id != logged_in_user_id:
+            os.remove(img_path)
+            return templates.TemplateResponse(
+                "result.html",
+                {
+                    "request": request,
+                    "status": "fail",
+                    "error": "You can mark attendance only for yourself"
+                }
+            )
+
+        recognized.append(matched_name)
+
+    os.remove(img_path)
+
+    if not recognized:
+        return templates.TemplateResponse(
+            "result.html",
+            {"request": request, "status": "fail"}
+        )
+
+    today_csv = os.path.join(
+        ATTENDANCE_DIR,
+        f"{datetime.now().strftime('%Y-%m-%d')}_attendance.csv"
+    )
+
+    with open(today_csv, "a", newline="") as f:
+        writer = csv.writer(f)
+        if os.stat(today_csv).st_size == 0:
+            writer.writerow(["Person", "Timestamp"])
+        for p in set(recognized):
+            writer.writerow([p, datetime.now().strftime("%H:%M:%S")])
+
+    return templates.TemplateResponse(
+        "result.html",
+        {
+            "request": request,
+            "status": "success",
+            "recognized_persons": list(set(recognized))
+        }
+    )
+
+# -------------------- USER ATTENDANCE API --------------------
+
+@app.get("/attendance/my")
+async def my_attendance(request: Request):
+    s = get_session(request)
+    if not s["logged_in"] or s["role"] != "user":
+        return JSONResponse(status_code=403, content={"error": "Unauthorized"})
+
+    username = s["username"]
+    records = []
+
+    for file in os.listdir(ATTENDANCE_DIR):
+        with open(os.path.join(ATTENDANCE_DIR, file), "r") as f:
+            reader = csv.reader(f)
+            next(reader, None)
+            for row in reader:
+                if row[0] == username:
+                    records.append({
+                        "date": file[:10],
+                        "time": row[1]
+                    })
+
+    return records
+
+# -------------------- EXTRA ROUTER --------------------
+
 app.include_router(attendance_router, prefix="/attendance")

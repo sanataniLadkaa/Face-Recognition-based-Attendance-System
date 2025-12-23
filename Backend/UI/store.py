@@ -1,6 +1,7 @@
 import os
 import time
 import cv2
+import uuid
 from fastapi import APIRouter, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from deepface import DeepFace
@@ -28,6 +29,24 @@ MODEL_NAME = "Facenet"
 DETECTOR_BACKEND = "opencv"
 DeepFace.build_model(MODEL_NAME)
 
+# ---------------- HELPERS ----------------
+
+def get_or_create_user_id(person_name: str) -> str:
+    """
+    Returns the same user_id for the same person_name.
+    Creates a new UUID only if the person does not exist.
+    """
+    result = supabase.table("face_embeddings") \
+        .select("user_id") \
+        .eq("person_name", person_name) \
+        .limit(1) \
+        .execute()
+
+    if result.data:
+        return result.data[0]["user_id"]
+
+    return str(uuid.uuid4())
+
 # ---------------- RECORD UI ----------------
 
 @router.get("/record", response_class=HTMLResponse)
@@ -43,6 +62,7 @@ async def record_ui():
     """)
 
 # ---------------- RECORD & UPLOAD ----------------
+
 @router.post("/start-recording")
 async def start_recording(label_name: str = Form(...)):
     cap = cv2.VideoCapture(0)
@@ -53,7 +73,7 @@ async def start_recording(label_name: str = Form(...)):
     start = time.time()
     inserted = 0
 
-    os.makedirs(TEMP_DIR, exist_ok=True)
+    user_id = get_or_create_user_id(label_name)
 
     try:
         while time.time() - start < 5:
@@ -74,8 +94,9 @@ async def start_recording(label_name: str = Form(...)):
 
                 embedding = list(map(float, rep[0]["embedding"]))
 
-                # 🔥 Insert into Supabase
+                # ✅ Correct insert (stable identity)
                 supabase.table("face_embeddings").insert({
+                    "user_id": user_id,
                     "person_name": label_name,
                     "embedding": embedding
                 }).execute()
@@ -86,7 +107,6 @@ async def start_recording(label_name: str = Form(...)):
                 print(f"⚠️ Face processing failed: {e}")
 
             finally:
-                # ✅ Always cleanup temp image
                 if os.path.exists(img_path):
                     os.remove(img_path)
 
@@ -97,8 +117,10 @@ async def start_recording(label_name: str = Form(...)):
         cap.release()
 
     return {
-        "saved_images": frame,
-        "new_embeddings_created": inserted
+        "person_name": label_name,
+        "user_id": user_id,
+        "frames_captured": frame,
+        "embeddings_created": inserted
     }
 
 # ---------------- MANAGE PERSONS ----------------

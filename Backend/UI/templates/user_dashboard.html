@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Attendance Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        .logout {
+            float: right;
+            text-decoration: none;
+            color: white;
+            background: #dc3545;
+            padding: 8px 14px;
+            border-radius: 4px;
+        }
+
+        .logout:hover {
+            background: #b52a37;
+        }
+
+        .card {
+            background: #fff;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .empty {
+            margin-top: 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+
+<a href="/logout" class="logout">Logout</a>
+
+<h2>Welcome, {{ username | default("User") | e }}</h2>
+
+<!-- 📸 Attendance Upload -->
+<div class="card">
+    <h3>Mark Attendance</h3>
+
+    <form action="/recognize_face" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required>
+        <br><br>
+        <button type="submit">Upload & Mark Attendance</button>
+    </form>
+</div>
+
+<!-- 📅 Attendance Table -->
+<div class="card">
+    <h3>Your Attendance Records</h3>
+
+    <table id="attendanceTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <p id="emptyMsg" class="empty" style="display:none;">
+        No attendance records found.
+    </p>
+</div>
+
+<script>
+    fetch("/attendance/my")
+        .then(response => response.json())
+        .then(data => {
+            const tableBody = document.querySelector("#attendanceTable tbody");
+            const emptyMsg = document.getElementById("emptyMsg");
+
+            if (!data || data.length === 0) {
+                emptyMsg.style.display = "block";
+                return;
+            }
+
+            data.forEach(record => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.time}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        })
+        .catch(err => console.error("Error loading attendance:", err));
+</script>
+
+</body>
+</html>
