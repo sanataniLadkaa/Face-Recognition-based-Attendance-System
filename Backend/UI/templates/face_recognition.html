@@ -1,77 +1,230 @@
-<!-- face_recognition.html -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Face Recognition</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            padding: 40px;
-        }
-        .container {
-            max-width: 500px;
-            margin: auto;
-        }
-        .card {
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            background: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        button.secondary {
-            background: #1565c0;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        a {
-            text-decoration: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Face Recognition - Admin</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    padding: 30px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+/* Buttons */
+button {
+    padding: 10px;
+    margin-top: 8px;
+    width: 100%;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 15px;
+    cursor: pointer;
+}
+button.secondary { background:#1565c0; }
+button.warn { background:#ef6c00; }
+button:hover { opacity:0.9; }
+
+input, select, textarea {
+    width:100%;
+    padding:8px;
+    margin-top:6px;
+}
+
+hr { margin:25px 0; }
+
+/* CHAT UI */
+.chat-wrapper {
+    display:flex;
+    height:450px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    overflow:hidden;
+}
+
+.user-list {
+    width:30%;
+    background:#fafafa;
+    border-right:1px solid #ddd;
+    overflow-y:auto;
+}
+
+.user-item {
+    padding:12px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+}
+.user-item:hover {
+    background:#e3f2fd;
+}
+
+.chat-area {
+    width:70%;
+    display:flex;
+    flex-direction:column;
+}
+
+.chat-header {
+    padding:12px;
+    font-weight:bold;
+    border-bottom:1px solid #ddd;
+}
+
+.chat-messages {
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+    background:#f9f9f9;
+}
+
+.chat-messages p {
+    margin:6px 0;
+}
+
+.chat-form {
+    display:flex;
+    gap:6px;
+    padding:10px;
+    border-top:1px solid #ddd;
+}
+.chat-form input[type="text"] {
+    flex:1;
+}
+</style>
 </head>
+
 <body>
 <div class="container">
-    <div class="card">
-        <h2>📷 Face Recognition Attendance</h2>
+<div class="card">
 
-        <!-- MARK ATTENDANCE -->
-        <form action="/recognize_face" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept="image/*" required>
-            <button type="submit">Mark Attendance</button>
+<h2>📷 Face Recognition — Admin</h2>
+
+<!-- ATTENDANCE -->
+<form action="/recognize_face" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*" required>
+    <button type="submit">Mark Attendance</button>
+</form>
+
+<button class="secondary" onclick="location.href='/attendance/record'">📹 Record New Person</button>
+<button onclick="location.href='/dashboard'">📊 View Attendance</button>
+<button class="warn" onclick="location.href='/attendance/manage'">✏️ Edit / Delete Persons</button>
+
+<hr>
+
+<h3>💬 Admin Chat</h3>
+
+<div class="chat-wrapper">
+
+    <!-- USER LIST -->
+    <div class="user-list" id="userList">
+        <p style="padding:10px;font-weight:bold;">Users</p>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+        <div class="chat-header" id="chatHeader">
+            Select a user
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <form class="chat-form" id="chatForm" enctype="multipart/form-data">
+            <input type="hidden" name="user_id" id="activeUserId">
+            <input type="text" name="message" placeholder="Type message...">
+            <input type="file" name="file">
+            <button class="secondary" type="submit">Send</button>
         </form>
-
-        <!-- 🔥 IMAGE RECORDING BUTTON -->
-        <a href="/attendance/record">
-            <button type="button" class="secondary">
-                📹 Record New Person (Camera)
-            </button>
-        </a>
-
-        <a href="/dashboard">
-            <button type="button">📊 View Attendance</button>
-        </a>
-
-        <br>
-
-<a href="/attendance/manage">
-    <button style="background:#ef6c00">✏️ Edit / Delete Persons</button>
-</a>
     </div>
 </div>
+
+</div>
+</div>
+
+<script>
+let activeUserId = null;
+let activeUserName = "";
+
+/* LOAD USERS */
+fetch("/admin/users", { credentials: "include" })
+.then(res => res.json())
+.then(users => {
+    const ul = document.getElementById("userList");
+
+    users.forEach(u => {
+        const div = document.createElement("div");
+        div.className = "user-item";
+        div.textContent = u.name + " (" + u.id.slice(0,6) + ")";
+        div.onclick = () => openChat(u.id, u.name);
+        ul.appendChild(div);
+    });
+});
+
+/* OPEN CHAT */
+function openChat(uid, name) {
+    activeUserId = uid;
+    activeUserName = name;
+    document.getElementById("activeUserId").value = uid;
+    document.getElementById("chatHeader").innerText = name;
+    loadMessages();
+}
+
+/* LOAD CHAT HISTORY */
+function loadMessages() {
+    if (!activeUserId) return;
+
+    fetch(`/chat/admin/history/${activeUserId}`, { credentials: "include" })
+    .then(res => res.json())
+    .then(msgs => {
+        const box = document.getElementById("chatMessages");
+        box.innerHTML = "";
+
+        msgs.forEach(m => {
+            const p = document.createElement("p");
+            const who = m.sender_role === "admin" ? "You" : activeUserName;
+            p.innerHTML = `<b>${who}:</b> ${m.message || ""}`;
+            box.appendChild(p);
+        });
+
+        box.scrollTop = box.scrollHeight;
+    });
+}
+
+/* SEND MESSAGE */
+document.getElementById("chatForm").onsubmit = e => {
+    e.preventDefault();
+    if (!activeUserId) return alert("Select a user first");
+
+    const fd = new FormData(e.target);
+
+    fetch("/chat/admin/send", {
+        method:"POST",
+        body:fd,
+        credentials:"include"
+    }).then(() => {
+        e.target.reset();
+        loadMessages();
+    });
+};
+
+/* AUTO REFRESH */
+setInterval(() => {
+    if (activeUserId) loadMessages();
+}, 3000);
+</script>
+
 </body>
 </html>
