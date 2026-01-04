@@ -14,10 +14,10 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 BASE = r"C:\MyDocuments\Attendance system Deepface\Backend"
-
+BASE_F=r"C:\MyDocuments\Attendance system Deepface\Frontend"
 UPLOAD_DIR = os.path.join(BASE, "uploads")
 ATTENDANCE_DIR = os.path.join(BASE, "attendance_logs")
-TEMPLATES_DIR = os.path.join(BASE, "UI", "templates")
+TEMPLATES_DIR = os.path.join(BASE_F, "templates")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(ATTENDANCE_DIR, exist_ok=True)

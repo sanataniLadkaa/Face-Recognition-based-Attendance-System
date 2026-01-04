@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, JSONResponse
-from core.security import get_session
-from core.config import templates, ATTENDANCE_DIR
+from UI.core.security import get_session
+from UI.core.config import templates, ATTENDANCE_DIR
 import csv, os
 
 router = APIRouter()

@@ -1,0 +1,36 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+
+# Git
+.git/
+.gitignore
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs & temp files
+*.log
+temp_capture/
+attendance_logs/
+
+# Datasets & large local data (DO NOT ship to Docker)
+dataset/
+uploads/
+
+# Docker artifacts
+Dockerfile
+docker-compose.yml
+
+# Test & misc
+tests/
+*.ipynb

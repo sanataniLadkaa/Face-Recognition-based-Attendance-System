@@ -7,27 +7,26 @@ from fastapi import APIRouter, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from deepface import DeepFace
 
-from core.config import (
+from ..core.config import (
     supabase,
     UPLOAD_DIR,
     ATTENDANCE_DIR,
     templates
 )
-from core.security import get_session
+from UI.core.security import get_session
 
 # ---------------- ROUTER ----------------
 router = APIRouter()
 
 # ---------------- DEEPFACE CONFIG ----------------
-MODEL_NAME = "Facenet"
+MODEL_NAME = "Facenet"          # ✅ STRING ONLY
 DETECTOR_BACKEND = "opencv"
 DISTANCE_THRESHOLD = 0.6
 
-# Load model once
+# ✅ Load ONCE at import time (DeepFace caches it)
 DeepFace.build_model(MODEL_NAME)
 
 # ---------------- FACE RECOGNITION ----------------
-
 @router.post("/recognize_face", response_class=HTMLResponse)
 async def recognize_face(
     request: Request,
@@ -54,7 +53,7 @@ async def recognize_face(
     try:
         faces = DeepFace.represent(
             img_path=img_path,
-            model_name=MODEL_NAME,
+            model_name=MODEL_NAME,          # ✅ CORRECT
             detector_backend=DETECTOR_BACKEND,
             enforce_detection=False
         )
@@ -65,7 +64,7 @@ async def recognize_face(
             {
                 "request": request,
                 "status": "error",
-                "error": str(e)
+                "reason": str(e)
             }
         )
 
@@ -97,7 +96,7 @@ async def recognize_face(
                 {
                     "request": request,
                     "status": "fail",
-                    "error": "You can mark attendance only for yourself"
+                    "reason": "You can mark attendance only for yourself"
                 }
             )
 
@@ -112,7 +111,7 @@ async def recognize_face(
             {
                 "request": request,
                 "status": "fail",
-                "error": "No matching face found"
+                "reason": "No matching face found"
             }
         )
 
