@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: attendance-deepface
+    env: python
+    buildCommand: |
+      apt-get update && apt-get install -y \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender-dev \
+        && pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port 8000
