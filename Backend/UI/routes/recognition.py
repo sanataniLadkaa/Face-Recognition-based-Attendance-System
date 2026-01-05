@@ -13,7 +13,7 @@ from ..core.config import (
     ATTENDANCE_DIR,
     templates
 )
-from UI.core.security import get_session
+from Backend.UI.core.security import get_session
 
 # ---------------- ROUTER ----------------
 router = APIRouter()

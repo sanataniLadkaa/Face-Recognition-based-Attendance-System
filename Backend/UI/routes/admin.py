@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from UI.core.security import require_admin
-from UI.core.config import templates, ATTENDANCE_DIR
+from Backend.UI.core.security import require_admin
+from Backend.UI.core.config import templates, ATTENDANCE_DIR
 import csv, os
 from datetime import datetime
 

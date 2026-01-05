@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from UI.store import router as attendance_router
-from UI.routes import auth, admin, user, recognition, file_upload
+from Backend.UI.store import router as attendance_router
+from Backend.UI.routes import auth, admin, user, recognition, file_upload
 
 app = FastAPI()
 

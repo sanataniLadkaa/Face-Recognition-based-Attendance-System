@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse
-from UI.login import verify_login
-from UI.core.config import templates, supabase
+from Backend.UI.login import verify_login
+from Backend.UI.core.config import templates, supabase
 
 router = APIRouter()
 
