@@ -85,11 +85,17 @@ textarea {
 <div class="card">
 <h3>📸 Mark Attendance</h3>
 
-<form action="/recognize_face" method="post" enctype="multipart/form-data">
+<form id="attendanceForm" action="/recognize_face" method="post" enctype="multipart/form-data">
     <input type="file" name="file" accept="image/*" required>
-    <br><br>
-    <button type="submit">Upload & Mark</button>
+
+    <!-- GPS hidden fields -->
+    <input type="hidden" name="latitude" id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+
+    <button type="submit">Mark Attendance</button>
 </form>
+
+<p id="gpsStatus" style="margin-top:8px;font-size:14px;color:#ef6c00;"></p>
 </div>
 
 <!-- 📅 ATTENDANCE TABLE -->
@@ -125,6 +131,52 @@ textarea {
 </form>
 </div>
 
+<!-- ================= GPS + LOGIC ================= -->
+<script>
+const gpsStatus = document.getElementById("gpsStatus");
+const latInput = document.getElementById("latitude");
+const lonInput = document.getElementById("longitude");
+const attendanceForm = document.getElementById("attendanceForm");
+
+function fetchLocationAndSubmit() {
+    if (!navigator.geolocation) {
+        alert("GPS not supported by browser");
+        return;
+    }
+
+    gpsStatus.innerText = "📡 Fetching location...";
+    gpsStatus.style.color = "#ef6c00";
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            latInput.value = position.coords.latitude;
+            lonInput.value = position.coords.longitude;
+
+            gpsStatus.innerText = "📍 Location detected";
+            gpsStatus.style.color = "#2e7d32";
+
+            // ✅ submit ONLY after GPS is ready
+            attendanceForm.submit();
+        },
+        () => {
+            alert("Location permission is required to mark attendance");
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
+    );
+}
+
+// ⛔ Stop default submit
+attendanceForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    fetchLocationAndSubmit();
+});
+</script>
+
+<!-- ================= DATA LOAD ================= -->
 <script>
 /* LOAD ATTENDANCE */
 fetch("/attendance/my")
@@ -174,7 +226,6 @@ document.getElementById("chatForm").onsubmit = e => {
         loadChat();
     });
 };
-
 </script>
 
 </body>

@@ -46,22 +46,25 @@
 
         {% if status == "success" %}
             <h2 class="success">✅ Attendance Marked</h2>
-            <ul>
-                {% for person in recognized_persons %}
-                    <li>{{ person }}</li>
-                {% endfor %}
-            </ul>
+
+            {% if recognized_persons %}
+                <ul>
+                    {% for person in recognized_persons %}
+                        <li>{{ person }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
 
         {% elif status == "fail" %}
-            <h2 class="warning">❌ No Match Found</h2>
-            <p>{{ error }}</p>
+            <h2 class="warning">⚠️ Attendance Failed</h2>
+            <p>{{ reason | default("Attendance could not be marked") }}</p>
 
         {% else %}
-            <h2 class="error">⚠️ Error</h2>
-            <p>{{ error }}</p>
+            <h2 class="error">❌ Error</h2>
+            <p>{{ reason | default("Something went wrong") }}</p>
         {% endif %}
 
-        <a href="/">⬅ Back to Upload</a>
+        <a href="/user">⬅ Back to Upload</a>
 
     </div>
 </div>

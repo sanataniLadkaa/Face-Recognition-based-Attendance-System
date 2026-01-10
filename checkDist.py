@@ -1,10 +1,11 @@
 import os
 import shutil
 import csv
+import math
 from datetime import datetime
-from typing import Optional
 
-from fastapi import APIRouter, Request, File, UploadFile, Form
+import geocoder
+from fastapi import APIRouter, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from deepface import DeepFace
 
@@ -14,66 +15,94 @@ from ..core.config import (
     ATTENDANCE_DIR,
     templates
 )
-from ..core.location import validate_user_location
 from Backend.UI.core.security import get_session
 
+# ---------------- ROUTER ----------------
 router = APIRouter()
 
-# ================= DEEPFACE CONFIG =================
+# ---------------- DEEPFACE CONFIG ----------------
 MODEL_NAME = "Facenet"
 DETECTOR_BACKEND = "opencv"
 DISTANCE_THRESHOLD = 0.6
 
-# Load model once
+# Load model ONCE
 DeepFace.build_model(MODEL_NAME)
 
+# ---------------- OFFICE LOCATION ----------------
+OFFICE_LATITUDE = 28.6139     # CHANGE to office latitude
+OFFICE_LONGITUDE = 77.2090   # CHANGE to office longitude
+MAX_DISTANCE_METERS = 100000     # 10 meters
 
-# ================= FACE RECOGNITION =================
+# ---------------- DISTANCE HELPER ----------------
+def haversine_distance(lat1, lon1, lat2, lon2):
+    R = 6371000  # meters
+
+    lat1 = math.radians(lat1)
+    lon1 = math.radians(lon1)
+    lat2 = math.radians(lat2)
+    lon2 = math.radians(lon2)
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return R * c
+
+# ---------------- FACE RECOGNITION ----------------
 @router.post("/recognize_face", response_class=HTMLResponse)
 async def recognize_face(
     request: Request,
-    file: UploadFile = File(...),
-    latitude: Optional[float] = Form(None),
-    longitude: Optional[float] = Form(None),
+    file: UploadFile = File(...)
 ):
-    # ---------- SESSION CHECK ----------
     session = get_session(request)
 
-    if not session or not session.get("logged_in"):
-        return RedirectResponse("/login", status_code=302)
+    if not session["logged_in"]:
+        return RedirectResponse("/login")
 
     role = session["role"]
     logged_in_user_id = session["user_id"]
 
-    # ---------- LOCATION CHECK ----------
-    if latitude is None or longitude is None:
+    # ---------- GET LOCATION VIA IP ----------
+    g = geocoder.ip("me")
+
+    if not g.ok or not g.latlng:
         return templates.TemplateResponse(
             "result.html",
             {
                 "request": request,
                 "status": "fail",
-                "reason": "Location permission required (GPS not received)"
+                "reason": "Unable to determine your location"
             }
         )
 
-    is_allowed, reason = validate_user_location(latitude, longitude)
+    device_lat, device_lon = g.latlng
 
-    if not is_allowed:
+    distance = haversine_distance(
+        device_lat,
+        device_lon,
+        OFFICE_LATITUDE,
+        OFFICE_LONGITUDE
+    )
+
+    if distance > MAX_DISTANCE_METERS:
         return templates.TemplateResponse(
             "result.html",
             {
                 "request": request,
                 "status": "fail",
-                "reason": reason
+                "reason": "You are not inside office premises"
             }
         )
 
     # ---------- SAVE IMAGE ----------
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
     img_path = os.path.join(
         UPLOAD_DIR,
-        f"{int(datetime.now().timestamp())}_{file.filename}"
+        f"{datetime.now().timestamp()}_{file.filename}"
     )
 
     with open(img_path, "wb") as buffer:
@@ -94,13 +123,12 @@ async def recognize_face(
             {
                 "request": request,
                 "status": "error",
-                "reason": f"Face processing failed: {str(e)}"
+                "reason": str(e)
             }
         )
 
     recognized_names = []
 
-    # ---------- FACE MATCHING ----------
     for face in faces:
         embedding = list(map(float, face["embedding"]))
 
@@ -119,7 +147,6 @@ async def recognize_face(
         matched_user_id = result.data[0]["user_id"]
         matched_name = result.data[0]["person_name"]
 
-        # User cannot mark attendance for others
         if role == "user" and matched_user_id != logged_in_user_id:
             os.remove(img_path)
             return templates.TemplateResponse(
@@ -146,25 +173,20 @@ async def recognize_face(
         )
 
     # ---------- WRITE ATTENDANCE ----------
-    os.makedirs(ATTENDANCE_DIR, exist_ok=True)
-
     today_csv = os.path.join(
         ATTENDANCE_DIR,
         f"{datetime.now().strftime('%Y-%m-%d')}_attendance.csv"
     )
 
-    file_exists = os.path.exists(today_csv)
-
     with open(today_csv, "a", newline="") as f:
         writer = csv.writer(f)
 
-        if not file_exists:
+        if os.stat(today_csv).st_size == 0:
             writer.writerow(["Person", "Timestamp"])
 
         for name in set(recognized_names):
             writer.writerow([name, datetime.now().strftime("%H:%M:%S")])
 
-    # ---------- SUCCESS ----------
     return templates.TemplateResponse(
         "result.html",
         {
