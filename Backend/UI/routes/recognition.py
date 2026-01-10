@@ -8,12 +8,7 @@ from fastapi import APIRouter, Request, File, UploadFile, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from deepface import DeepFace
 
-from ..core.config import (
-    supabase,
-    UPLOAD_DIR,
-    ATTENDANCE_DIR,
-    templates
-)
+from ..core.config import supabase, UPLOAD_DIR, ATTENDANCE_DIR, templates
 from ..core.location import validate_user_location
 from Backend.UI.core.security import get_session
 
@@ -24,7 +19,7 @@ MODEL_NAME = "Facenet"
 DETECTOR_BACKEND = "opencv"
 DISTANCE_THRESHOLD = 0.6
 
-# Load model once
+# Load model once (OK at module level)
 DeepFace.build_model(MODEL_NAME)
 
 
@@ -44,6 +39,7 @@ async def recognize_face(
 
     role = session["role"]
     logged_in_user_id = session["user_id"]
+    back_url = "/admin" if role == "admin" else "/user"
 
     # ---------- LOCATION CHECK ----------
     if latitude is None or longitude is None:
@@ -70,7 +66,6 @@ async def recognize_face(
 
     # ---------- SAVE IMAGE ----------
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-
     img_path = os.path.join(
         UPLOAD_DIR,
         f"{int(datetime.now().timestamp())}_{file.filename}"
@@ -119,7 +114,6 @@ async def recognize_face(
         matched_user_id = result.data[0]["user_id"]
         matched_name = result.data[0]["person_name"]
 
-        # User cannot mark attendance for others
         if role == "user" and matched_user_id != logged_in_user_id:
             os.remove(img_path)
             return templates.TemplateResponse(
@@ -147,7 +141,6 @@ async def recognize_face(
 
     # ---------- WRITE ATTENDANCE ----------
     os.makedirs(ATTENDANCE_DIR, exist_ok=True)
-
     today_csv = os.path.join(
         ATTENDANCE_DIR,
         f"{datetime.now().strftime('%Y-%m-%d')}_attendance.csv"
@@ -157,19 +150,17 @@ async def recognize_face(
 
     with open(today_csv, "a", newline="") as f:
         writer = csv.writer(f)
-
         if not file_exists:
             writer.writerow(["Person", "Timestamp"])
-
         for name in set(recognized_names):
             writer.writerow([name, datetime.now().strftime("%H:%M:%S")])
 
-    # ---------- SUCCESS ----------
     return templates.TemplateResponse(
         "result.html",
         {
             "request": request,
             "status": "success",
-            "recognized_persons": list(set(recognized_names))
+            "recognized_persons": list(set(recognized_names)),
+            "back_url": back_url
         }
     )
