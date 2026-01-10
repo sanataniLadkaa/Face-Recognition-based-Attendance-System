@@ -1,64 +1,54 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+import os, csv
 
-from Backend.UI.core.security import require_admin
+from Backend.UI.core.security import require_admin, get_session
 from Backend.UI.core.config import templates, ATTENDANCE_DIR
-import csv, os
-from datetime import datetime
 
 router = APIRouter()
 
-@router.get("/admin")
+
+# ================= ADMIN HOME =================
+@router.get("/admin", response_class=HTMLResponse)
 async def admin_home(request: Request):
     resp = require_admin(request)
     if resp:
         return resp
-    return templates.TemplateResponse("face_recognition.html", {"request": request})
 
-@router.get("/admin", response_class=HTMLResponse)
-def admin_dashboard(request: Request):
-    session = get_session(request)
-
-    if not session["logged_in"] or session["role"] != "admin":
-        return RedirectResponse("/login", status_code=302)
-
-    res = (
-        supabase
-        .table("face_embeddings")
-        .select("user_id, person_name")
-        .neq("user_id", ADMIN_UUID)
-        .execute()
+    return templates.TemplateResponse(
+        "face_recognition.html",
+        {"request": request}
     )
 
-    users = res.data or []
 
-    html = "<h2>Admin Dashboard</h2>"
+# ================= ADMIN DASHBOARD =================
+@router.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    session = get_session(request)
 
-    if not users:
-        html += "<p><b>No users available to message.</b></p>"
-        return html
+    if not session or session["role"] != "admin":
+        return RedirectResponse("/login", status_code=302)
 
-    html += """
-    <form action="/chat/admin/send" method="post" enctype="multipart/form-data">
-        <label>Select User</label><br>
-        <select name="user_id" required>
-    """
+    attendance = []
 
-    seen = set()
-    for u in users:
-        if u["user_id"] not in seen:
-            html += f"<option value='{u['user_id']}'>{u['person_name']}</option>"
-            seen.add(u["user_id"])
+    if os.path.exists(ATTENDANCE_DIR):
+        for file in os.listdir(ATTENDANCE_DIR):
+            if file.endswith("_attendance.csv"):
+                date = file.replace("_attendance.csv", "")
+                with open(os.path.join(ATTENDANCE_DIR, file)) as f:
+                    reader = csv.reader(f)
+                    next(reader, None)
+                    for row in reader:
+                        attendance.append({
+                            "date": date,
+                            "name": row[0],
+                            "time": row[1]
+                        })
 
-    html += """
-        </select><br><br>
-        <textarea name="message" placeholder="Type message"></textarea><br><br>
-        <input type="file" name="file"><br><br>
-        <button type="submit">Send</button>
-    </form>
-
-    <br><a href="/chat/admin">View Chats</a>
-    """
-
-    return html
-
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "attendance": attendance
+        }
+    )

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background: #1565c0;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+        .top-actions {
+            margin-bottom: 20px;
+        }
+        a {
+            margin-right: 15px;
+            text-decoration: none;
+            font-weight: bold;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+
+<h2>📊 Admin Attendance Dashboard</h2>
+
+<div class="top-actions">
+    <a href="/admin">⬅ Back to Face Recognition</a>
+    <a href="/logout">🚪 Logout</a>
+</div>
+
+{% if attendance %}
+<table>
+    <tr>
+        <th>Date</th>
+        <th>Name</th>
+        <th>Time</th>
+    </tr>
+
+    {% for record in attendance %}
+    <tr>
+        <td>{{ record.date }}</td>
+        <td>{{ record.name }}</td>
+        <td>{{ record.time }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p><b>No attendance records found.</b></p>
+{% endif %}
+
+</body>
+</html>
