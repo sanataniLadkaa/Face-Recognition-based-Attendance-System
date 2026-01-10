@@ -1,70 +1,233 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            padding: 30px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background: #1565c0;
-            color: white;
-        }
-        tr:nth-child(even) {
-            background: #f2f2f2;
-        }
-        .top-actions {
-            margin-bottom: 20px;
-        }
-        a {
-            margin-right: 15px;
-            text-decoration: none;
-            font-weight: bold;
-            color: #1565c0;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Admin Attendance Dashboard</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background:#f4f6f8;
+    padding:20px;
+}
+
+a { text-decoration:none; font-weight:bold; color:#1565c0; }
+
+.container {
+    display:flex;
+    gap:20px;
+}
+
+/* USER LIST */
+.user-list {
+    width:25%;
+    background:#fff;
+    padding:15px;
+    border-radius:6px;
+    height:600px;
+    overflow-y:auto;
+}
+
+.user {
+    padding:10px;
+    border-bottom:1px solid #ddd;
+    cursor:pointer;
+}
+.user:hover {
+    background:#e3f2fd;
+}
+
+/* CALENDAR */
+.calendar {
+    width:75%;
+    background:#fff;
+    padding:15px;
+    border-radius:6px;
+}
+
+.calendar-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+}
+
+.grid {
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:8px;
+}
+
+/* DAY CELL */
+.day {
+    height:90px;
+    border-radius:6px;
+    padding:5px;
+    border:1px solid #ccc;
+    position:relative;
+    font-size:12px;
+}
+
+/* STATUS COLORS */
+.single { background:#c8e6c9; }
+.multi  { background:#81c784; color:white; font-weight:bold; }
+.absent { background:#ffcdd2; }
+.future {
+    background:#e0e0e0;
+    color:#9e9e9e;
+    cursor:not-allowed;
+}
+
+/* TOOLTIP */
+.tooltip {
+    display:none;
+    position:absolute;
+    bottom:100%;
+    left:0;
+    background:#333;
+    color:#fff;
+    padding:6px;
+    border-radius:4px;
+    font-size:11px;
+    white-space:nowrap;
+    z-index:10;
+}
+
+.day:hover .tooltip {
+    display:block;
+}
+
+.weekday {
+    font-weight:bold;
+    text-align:center;
+}
+</style>
 </head>
+
 <body>
 
 <h2>📊 Admin Attendance Dashboard</h2>
+<a href="/admin">⬅ Back</a> | <a href="/logout">🚪 Logout</a>
 
-<div class="top-actions">
-    <a href="/admin">⬅ Back to Face Recognition</a>
-    <a href="/logout">🚪 Logout</a>
+<div class="container">
+
+    <!-- USERS -->
+    <div class="user-list" id="userList">
+        <b>Users</b>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="calendar">
+        <div class="calendar-header">
+            <button onclick="changeMonth(-1)">⬅</button>
+            <h3 id="calendarTitle">Select a user</h3>
+            <button onclick="changeMonth(1)">➡</button>
+        </div>
+
+        <div class="grid" id="weekdays"></div>
+        <div class="grid" id="calendarGrid"></div>
+    </div>
+
 </div>
 
-{% if attendance %}
-<table>
-    <tr>
-        <th>Date</th>
-        <th>Name</th>
-        <th>Time</th>
-    </tr>
+<script>
+let attendanceData = {};
+let currentUser = null;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
 
-    {% for record in attendance %}
-    <tr>
-        <td>{{ record.date }}</td>
-        <td>{{ record.name }}</td>
-        <td>{{ record.time }}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}
-<p><b>No attendance records found.</b></p>
-{% endif %}
+const weekdayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+/* LOAD USERS */
+fetch("/admin/dashboard/users")
+.then(res => res.json())
+.then(users => {
+    const ul = document.getElementById("userList");
+    users.forEach(u => {
+        const div = document.createElement("div");
+        div.className = "user";
+        div.innerText = u;
+        div.onclick = () => loadUser(u);
+        ul.appendChild(div);
+    });
+});
+
+/* LOAD USER ATTENDANCE */
+function loadUser(username) {
+    fetch(`/admin/dashboard/attendance/${username}`)
+    .then(res => res.json())
+    .then(data => {
+        attendanceData = data;
+        currentUser = username;
+        renderCalendar();
+    });
+}
+
+/* MONTH CHANGE */
+function changeMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    renderCalendar();
+}
+
+/* RENDER CALENDAR */
+function renderCalendar() {
+    if (!currentUser) return;
+
+    const title = document.getElementById("calendarTitle");
+    title.innerText = `${currentUser} — ${new Date(currentYear, currentMonth).toLocaleString('default',{month:'long'})} ${currentYear}`;
+
+    const grid = document.getElementById("calendarGrid");
+    const weekdays = document.getElementById("weekdays");
+    grid.innerHTML = "";
+    weekdays.innerHTML = "";
+
+    weekdayNames.forEach(d => {
+        const w = document.createElement("div");
+        w.className = "weekday";
+        w.innerText = d;
+        weekdays.appendChild(w);
+    });
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    for (let i = 0; i < firstDay; i++) {
+        grid.appendChild(document.createElement("div"));
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const cell = document.createElement("div");
+        cell.className = "day";
+        cell.innerHTML = `<b>${day}</b>`;
+
+        const dateKey = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const entries = attendanceData[dateKey] || [];
+        const cellDate = new Date(currentYear, currentMonth, day);
+
+        if (cellDate > today) {
+            cell.classList.add("future");
+        } else if (entries.length === 0) {
+            cell.classList.add("absent");
+        } else if (entries.length === 1) {
+            cell.classList.add("single");
+        } else {
+            cell.classList.add("multi");
+        }
+
+        if (entries.length && cellDate <= today) {
+            const tip = document.createElement("div");
+            tip.className = "tooltip";
+            tip.innerHTML = entries.map(t => `⏰ ${t}`).join("<br>");
+            cell.appendChild(tip);
+        }
+
+        grid.appendChild(cell);
+    }
+}
+</script>
 
 </body>
 </html>
