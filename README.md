@@ -53,13 +53,6 @@ Authentication | FastAPI Sessions |
 
 ---
 
-## ⚙️ Setup Instructions
-
-### 1️⃣ Clone Repository
-```bash
-git clone https://github.com/<your-username>/Face-Recognition-based-Attendance-System.git
-cd Face-Recognition-based-Attendance-System ```
-
 
 ## 📊 Attendance Logic
 - Attendance is recorded after a successful face match
