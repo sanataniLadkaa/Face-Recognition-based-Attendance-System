@@ -51,9 +51,6 @@ Authentication | FastAPI Sessions |
 ---
 
 
----
-
-
 ## 📊 Attendance Logic
 - Attendance is recorded after a successful face match
 - Each match is timestamped
