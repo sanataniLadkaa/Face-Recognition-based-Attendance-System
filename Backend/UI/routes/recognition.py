@@ -19,11 +19,9 @@ MODEL_NAME = "Facenet"
 DETECTOR_BACKEND = "opencv"
 DISTANCE_THRESHOLD = 0.6
 
-# Load model once (OK at module level)
 DeepFace.build_model(MODEL_NAME)
 
 
-# ================= FACE RECOGNITION =================
 @router.post("/recognize_face", response_class=HTMLResponse)
 async def recognize_face(
     request: Request,
@@ -31,7 +29,6 @@ async def recognize_face(
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
 ):
-    # ---------- SESSION CHECK ----------
     session = get_session(request)
 
     if not session or not session.get("logged_in"):
@@ -48,19 +45,20 @@ async def recognize_face(
             {
                 "request": request,
                 "status": "fail",
-                "reason": "Location permission required (GPS not received)"
+                "reason": "Location permission required",
+                "back_url": back_url
             }
         )
 
     is_allowed, reason = validate_user_location(latitude, longitude)
-
     if not is_allowed:
         return templates.TemplateResponse(
             "result.html",
             {
                 "request": request,
                 "status": "fail",
-                "reason": reason
+                "reason": reason,
+                "back_url": back_url
             }
         )
 
@@ -89,7 +87,8 @@ async def recognize_face(
             {
                 "request": request,
                 "status": "error",
-                "reason": f"Face processing failed: {str(e)}"
+                "reason": str(e),
+                "back_url": back_url
             }
         )
 
@@ -121,7 +120,8 @@ async def recognize_face(
                 {
                     "request": request,
                     "status": "fail",
-                    "reason": "You can mark attendance only for yourself"
+                    "reason": "You can mark attendance only for yourself",
+                    "back_url": back_url
                 }
             )
 
@@ -135,7 +135,8 @@ async def recognize_face(
             {
                 "request": request,
                 "status": "fail",
-                "reason": "No matching face found"
+                "reason": "No matching face found",
+                "back_url": back_url
             }
         )
 

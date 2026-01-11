@@ -20,10 +20,18 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 router = APIRouter()
 
 # ---------------- PATHS ----------------
-BASE = r"C:\MyDocuments\Attendance system Deepface\Backend"
-TEMP_DIR = os.path.join(BASE, "temp_capture")
-os.makedirs(TEMP_DIR, exist_ok=True)
+# ---------------- PATHS (GLOBAL SAFE) ----------------
 
+# Absolute path of this file
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Backend root (adjust levels if needed)
+BASE_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+
+# Temp capture directory
+TEMP_DIR = os.path.join(BASE_DIR, "temp_capture")
+
+os.makedirs(TEMP_DIR, exist_ok=True)
 # ---------------- MODEL ----------------
 MODEL_NAME = "Facenet"
 DETECTOR_BACKEND = "opencv"
