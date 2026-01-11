@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Face Recognition - Admin</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    padding: 30px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    position: relative;
+}
+
+/* Buttons */
+button {
+    padding: 10px;
+    margin-top: 8px;
+    width: 100%;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 15px;
+    cursor: pointer;
+}
+button.secondary { background:#1565c0; }
+button.warn { background:#ef6c00; }
+button:hover { opacity:0.9; }
+
+/* LOGOUT BUTTON */
+.logout-btn {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    width: auto;
+    padding: 8px 16px;
+    background: #c62828;
+    font-size: 14px;
+}
+
+/* Inputs */
+input, select, textarea {
+    width:100%;
+    padding:8px;
+    margin-top:6px;
+}
+
+hr { margin:25px 0; }
+
+/* CHAT UI */
+.chat-wrapper {
+    display:flex;
+    height:450px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    overflow:hidden;
+}
+
+.user-list {
+    width:30%;
+    background:#fafafa;
+    border-right:1px solid #ddd;
+    overflow-y:auto;
+}
+
+.user-item {
+    padding:12px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+}
+.user-item:hover {
+    background:#e3f2fd;
+}
+
+.chat-area {
+    width:70%;
+    display:flex;
+    flex-direction:column;
+}
+
+.chat-header {
+    padding:12px;
+    font-weight:bold;
+    border-bottom:1px solid #ddd;
+}
+
+.chat-messages {
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+    background:#f9f9f9;
+}
+
+.chat-messages p {
+    margin:6px 0;
+}
+
+/* CHAT FORM */
+.chat-form {
+    display:flex;
+    gap:6px;
+    padding:10px;
+    border-top:1px solid #ddd;
+}
+
+.chat-form input[type="text"] {
+    flex:1;
+    width:auto;
+    padding:10px;
+    font-size:15px;
+}
+
+/* Prevent Send button stretching */
+.chat-form button {
+    width:auto;
+    margin-top:0;
+    padding:10px 18px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<div class="card">
+
+<h2>📷 Face Recognition — Admin</h2>
+
+<button class="logout-btn" onclick="location.href='/logout'">
+    🚪 Logout
+</button>
+
+<!-- ATTENDANCE -->
+<form id="attendanceForm" action="/recognize_face" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*" required>
+
+    <!-- GPS hidden fields -->
+    <input type="hidden" name="latitude" id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+
+    <button type="submit">Mark Attendance</button>
+</form>
+
+<p id="gpsStatus" style="margin-top:8px;font-size:14px;color:#ef6c00;"></p>
+
+
+<button class="secondary" onclick="location.href='/attendance/record'">📹 Record New Person</button>
+<button onclick="location.href='/admin/dashboard'">
+    📊 View Attendance
+</button>
+<button class="warn" onclick="location.href='/attendance/manage'">✏️ Edit / Delete Persons</button>
+
+<hr>
+
+<h3>💬 Admin Chat</h3>
+
+<div class="chat-wrapper">
+
+    <!-- USER LIST -->
+    <div class="user-list" id="userList">
+        <p style="padding:10px;font-weight:bold;">Users</p>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+        <div class="chat-header" id="chatHeader">
+            Select a user
+        </div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <form class="chat-form" id="chatForm" enctype="multipart/form-data">
+            <input type="hidden" name="user_id" id="activeUserId">
+
+            <input 
+                type="text" 
+                name="message" 
+                placeholder="Type message..."
+                style="flex:1; width:auto; padding:10px; font-size:15px;"
+                required
+            >
+
+            <button class="secondary" type="submit">Send</button>
+        </form>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script>
+let activeUserId = null;
+let activeUserName = "";
+
+/* LOAD USERS */
+fetch("/admin/users", { credentials: "include" })
+.then(res => res.json())
+.then(users => {
+    const ul = document.getElementById("userList");
+    users.forEach(u => {
+        const div = document.createElement("div");
+        div.className = "user-item";
+        div.textContent = u.name + " (" + u.id.slice(0,6) + ")";
+        div.onclick = () => openChat(u.id, u.name);
+        ul.appendChild(div);
+    });
+});
+
+/* OPEN CHAT */
+function openChat(uid, name) {
+    activeUserId = uid;
+    activeUserName = name;
+    document.getElementById("activeUserId").value = uid;
+    document.getElementById("chatHeader").innerText = name;
+    loadMessages();
+}
+
+/* LOAD CHAT HISTORY */
+function loadMessages() {
+    if (!activeUserId) return;
+
+    fetch(`/chat/admin/history/${activeUserId}`, { credentials: "include" })
+    .then(res => res.json())
+    .then(msgs => {
+        const box = document.getElementById("chatMessages");
+        box.innerHTML = "";
+
+        msgs.forEach(m => {
+            const p = document.createElement("p");
+            const who = m.sender_role === "admin" ? "You" : activeUserName;
+            p.innerHTML = `<b>${who}:</b> ${m.message || ""}`;
+            box.appendChild(p);
+        });
+
+        box.scrollTop = box.scrollHeight;
+    });
+}
+
+/* SEND MESSAGE */
+document.getElementById("chatForm").onsubmit = e => {
+    e.preventDefault();
+    if (!activeUserId) return alert("Select a user first");
+
+    fetch("/chat/admin/send", {
+        method:"POST",
+        body:new FormData(e.target),
+        credentials:"include"
+    }).then(() => {
+        e.target.reset();
+        loadMessages();
+    });
+};
+
+/* AUTO REFRESH */
+setInterval(() => {
+    if (activeUserId) loadMessages();
+}, 3000);
+
+// <script>
+const gpsStatus = document.getElementById("gpsStatus");
+const latInput = document.getElementById("latitude");
+const lonInput = document.getElementById("longitude");
+const attendanceForm = document.getElementById("attendanceForm");
+
+function fetchLocationAndSubmit() {
+    if (!navigator.geolocation) {
+        alert("GPS not supported by browser");
+        return;
+    }
+
+    gpsStatus.innerText = "📡 Fetching location...";
+    gpsStatus.style.color = "#ef6c00";
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            latInput.value = position.coords.latitude;
+            lonInput.value = position.coords.longitude;
+
+            gpsStatus.innerText = "📍 Location detected";
+            gpsStatus.style.color = "#2e7d32";
+
+            // ✅ SUBMIT ONLY AFTER GPS IS SET
+            attendanceForm.submit();
+        },
+        (error) => {
+            alert("Location permission is required to mark attendance");
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
+    );
+}
+
+// ⛔ prevent default submit
+attendanceForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    fetchLocationAndSubmit();
+});
+</script>
+
+
+
+
+
+</body>
+</html>

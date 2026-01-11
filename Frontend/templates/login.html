@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | Attendance System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --error: #dc2626;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+            background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            background: var(--card);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+        }
+
+        .login-card h2 {
+            margin: 0;
+            margin-bottom: 6px;
+            color: var(--text);
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 28px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .error {
+            margin-top: 16px;
+            padding: 10px;
+            background: rgba(220, 38, 38, 0.08);
+            color: var(--error);
+            font-size: 0.85rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        footer {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2>Welcome Back</h2>
+    <div class="subtitle">Sign in to your attendance dashboard</div>
+
+    <form method="POST" action="/login">
+        <div class="field">
+            <label for="username">User ID</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="Enter your user ID"
+                required
+            >
+        </div>
+
+        <div class="field">
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                required
+            >
+        </div>
+
+        <button type="submit">Sign In</button>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+    </form>
+
+    <footer>
+        © {{ year | default("2025") }} Attendance System
+    </footer>
+</div>
+
+</body>
+</html>

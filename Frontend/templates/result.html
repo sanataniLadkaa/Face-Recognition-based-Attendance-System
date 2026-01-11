@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recognition Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+        }
+        .card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        h2 { margin-bottom: 16px; }
+        ul { list-style: none; padding: 0; }
+        li {
+            background: #f1f8f4;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { color: #2e7d32; }
+        .error { color: #c62828; }
+        .warning { color: #f57c00; }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+
+        {% if status == "success" %}
+            <h2 class="success">✅ Attendance Marked</h2>
+
+            {% if recognized_persons %}
+                <ul>
+                    {% for person in recognized_persons %}
+                        <li>{{ person }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+        {% elif status == "fail" %}
+            <h2 class="warning">⚠️ Attendance Failed</h2>
+            <p>{{ reason | default("Attendance could not be marked") }}</p>
+
+        {% else %}
+            <h2 class="error">❌ Error</h2>
+            <p>{{ reason | default("Something went wrong") }}</p>
+        {% endif %}
+
+        <a href="{{ back_url }}">⬅ Back to Upload</a>
+
+
+    </div>
+</div>
+</body>
+</html>

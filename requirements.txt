@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+
+deepface==0.0.79
+geocoder
+tensorflow==2.12.1
+keras==2.12.0
+numpy<2.0
+supabase
+opencv-python-headless
+pillow
+scipy

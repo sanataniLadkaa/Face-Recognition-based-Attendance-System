@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        .card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: left;
+        }
+        th {
+            background: #2e7d32;
+            color: #fff;
+        }
+        tr:hover {
+            background: #f1f8f4;
+        }
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 20px 0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>📅 Attendance — {{ date }}</h2>
+
+            {% if records %}
+            <table>
+                <tr>
+                    <th>Person Name</th>
+                    <th>Timestamp</th>
+                </tr>
+                {% for person, timestamp in records %}
+                <tr>
+                    <td>{{ person }}</td>
+                    <td>{{ timestamp }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+                <div class="empty">No attendance records for today.</div>
+            {% endif %}
+
+            <a class="back-link" href="/">⬅ Back to Upload</a>
+        </div>
+    </div>
+</body>
+</html>
+
