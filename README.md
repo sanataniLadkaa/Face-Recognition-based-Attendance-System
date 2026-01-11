@@ -50,5 +50,41 @@ Authentication | FastAPI Sessions |
 
 ---
 
-## 📁 Project Structure
 
+---
+
+## ⚙️ Setup Instructions
+
+### 1️⃣ Clone Repository
+bash
+git clone https://github.com/<your-username>/Face-Recognition-based-Attendance-System.git
+cd Face-Recognition-based-Attendance-System 
+
+### 📊 Attendance Logic
+Attendance recorded per face match
+
+### Calendar Legend
+
+🟢 Green: Present (multiple entries)
+🟩 Light Green: Single entry
+🔴 Red: Absent
+⚪ Grey: Future date
+
+###🔒 Security Considerations
+Admin-only route protection
+Users cannot mark attendance for others
+GPS validation enforced
+Stable identity via UUID-based user_id
+
+###🛠️ Future Enhancements
+
+Move attendance storage to Supabase
+Embedding averaging per user
+Liveness detection
+Anti-spoofing
+Attendance analytics & export
+
+
+###👤 Author
+Anurag Tiwari
+AI / Machine Learning Developer
