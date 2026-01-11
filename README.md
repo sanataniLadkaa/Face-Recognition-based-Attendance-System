@@ -58,49 +58,41 @@ Authentication | FastAPI Sessions |
 ### 1️⃣ Clone Repository
 ```bash
 git clone https://github.com/<your-username>/Face-Recognition-based-Attendance-System.git
-cd Face-Recognition-based-Attendance-System 
-📊 Attendance Logic
+cd Face-Recognition-based-Attendance-System ```
 
-Attendance is recorded after a successful face match
 
-Each match is timestamped
+## 📊 Attendance Logic
+- Attendance is recorded after a successful face match
+- Each match is timestamped
+- Multiple entries per day are supported
 
-Multiple entries per day are supported
+---
 
-📅 Calendar Legend
+## 📅 Calendar Legend
+- 🟢 **Green** — Present (multiple entries in a day)
+- 🟩 **Light Green** — Present (single entry)
+- 🔴 **Red** — Absent
+- ⚪ **Grey** — Future dates
 
-🟢 Green — Present (multiple entries in a day)
+---
 
-🟩 Light Green — Present (single entry)
+## 🔒 Security Considerations
+- Admin-only route protection
+- Users cannot mark attendance for other users
+- GPS-based location validation is mandatory
+- Stable identity maintained using UUID-based `user_id`
 
-🔴 Red — Absent
+---
 
-⚪ Grey — Future dates
+## 🛠️ Future Enhancements
+- Migrate attendance storage from CSV to Supabase
+- Embedding averaging per user
+- Liveness detection
+- Anti-spoofing mechanisms
+- Attendance analytics and export features
 
-🔒 Security Considerations
+---
 
-Admin-only route protection
-
-Users cannot mark attendance for other users
-
-GPS-based location validation is mandatory
-
-Stable identity maintained using UUID-based user_id
-
-🛠️ Future Enhancements
-
-Migrate attendance storage from CSV to Supabase
-
-Embedding averaging per user
-
-Liveness detection
-
-Anti-spoofing mechanisms
-
-Attendance analytics and export features
-
-👤 Author
-
-Anurag Tiwari
+## 👤 Author
+**Anurag Tiwari**  
 AI / Machine Learning Developer
-
